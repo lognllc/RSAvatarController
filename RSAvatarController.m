@@ -15,6 +15,7 @@
 {
 	UIPopoverController *popover;
 	__weak UIViewController *parentController;
+	UIActionSheet *_actionSheet;
 }
 
 - (BOOL)takingAvatar
@@ -30,14 +31,13 @@
 - (void)openActionSheetInController:(UIViewController *)viewController withSheetStyle:(UIActionSheetStyle)sheetStyle
 {
 	parentController = viewController;
-	UIActionSheet *actionSheet = nil;
 	if ([UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera]) {
-		actionSheet = [[UIActionSheet alloc] initWithTitle:nil delegate:self cancelButtonTitle:@"Cancel" destructiveButtonTitle:nil otherButtonTitles:@"Take a Photo", @"Select from Gallery", nil];
+		_actionSheet = [[UIActionSheet alloc] initWithTitle:nil delegate:self cancelButtonTitle:@"Cancel" destructiveButtonTitle:nil otherButtonTitles:@"Take a Photo", @"Select from Gallery", nil];
 	} else {
-		actionSheet = [[UIActionSheet alloc] initWithTitle:nil delegate:self cancelButtonTitle:@"Cancel" destructiveButtonTitle:nil otherButtonTitles:@"Select from Gallery", nil];
+		_actionSheet = [[UIActionSheet alloc] initWithTitle:nil delegate:self cancelButtonTitle:@"Cancel" destructiveButtonTitle:nil otherButtonTitles:@"Select from Gallery", nil];
 	}
-	actionSheet.actionSheetStyle = sheetStyle;
-	[actionSheet showInView:viewController.view];
+	_actionSheet.actionSheetStyle = sheetStyle;
+	[_actionSheet showInView:viewController.view];
 }
 
 - (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex
@@ -101,6 +101,7 @@
 	RSMoveAndScaleController *moveAndScale = [[RSMoveAndScaleController alloc] init];
 	moveAndScale.originImage = originImage;
 	moveAndScale.destinationSize = [self.delegate destImageSize];
+	moveAndScale.overlayView = [self.delegate overlayForMoveAndScale:moveAndScale];
 	moveAndScale.delegate = self;
 	[picker pushViewController:moveAndScale animated:NO];
 }
@@ -108,12 +109,12 @@
 - (void)moveAndScaleController:(RSMoveAndScaleController *)moveAndScale didFinishCropping:(UIImage *)destImage
 {
 	[self.delegate pickerController:_imagePicker pickedAvatar:destImage];
-	[self imagePickerControllerDidCancel:nil];
+	[self imagePickerControllerDidCancel:_imagePicker];
 }
 
 - (void)moveAndScaleControllerDidCancel:(RSMoveAndScaleController *)moveAndScale
 {
-	[self imagePickerControllerDidCancel:nil];
+	[self imagePickerControllerDidCancel:_imagePicker];
 }
 
 - (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker
@@ -122,7 +123,7 @@
 		[popover dismissPopoverAnimated:YES];
 		popover = nil;
 	} else {
-		[picker dismissViewControllerAnimated:YES completion:^{
+		[picker.presentingViewController dismissViewControllerAnimated:YES completion:^{
 			_imagePicker = nil;
 		}];
 	}
@@ -132,6 +133,19 @@
 {
 	popover = nil;
 	_imagePicker = nil;
+}
+
+#pragma mark - UINavigationControllerDelegate
+- (void)navigationController:(UINavigationController *)navigationController didShowViewController:(UIViewController *)viewController animated:(BOOL)animated
+{
+	if ([self.delegate respondsToSelector:@selector(navigationController:didShowViewController:animated:)])
+		[self.delegate navigationController:navigationController didShowViewController:viewController animated:animated];
+}
+
+- (void)navigationController:(UINavigationController *)navigationController willShowViewController:(UIViewController *)viewController animated:(BOOL)animated
+{
+	if ([self.delegate respondsToSelector:@selector(navigationController:willShowViewController:animated:)])
+		[self.delegate navigationController:navigationController willShowViewController:viewController animated:animated];
 }
 
 @end
